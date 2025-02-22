@@ -75,7 +75,7 @@ resam.fun <- function(AN, sam, n, f, B){
 }
 
 ################################################################################
-# Main function for jackknife
+# Main function for bootstrap
 # AN: population graph of Size N
 # n: sample size
 # f : sampling fraction
