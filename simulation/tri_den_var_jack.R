@@ -83,56 +83,56 @@ n <- round(N*f) # sample size
 B <- 10 # MC replicate to estimate true variance
 M <- 10 # MC replicate for jackknife
 
-################################################################################
-# Random Graph Generating Models
-
-#########################################
-# W random Graph
-# Kernel: |eps_i - eps_j|
-
-Xi <- matrix(rep(runif(N), times = N), nrow = N, byrow = F) # Latent positions
-H <- (abs(Xi - t(Xi))) # Matrix of connection probabilities
-AN <- graph_from_adjacency_matrix(gmodel.P(H, rep = 1, noloop = TRUE, symmetric.out = TRUE)) # population graph
-
-#########################################
-# SBM
-
-th.mat <- matrix(c(0.4, 0.1, 0.2, 0.1, 0.5, 0.3, 0.2, 0.3, 0.7), ncol = 3) # Block probability matrix
-lambda <- c(0.3, 0.3, 0.4) # Probability of group membership
-b <- N*lambda
-AN <- sample_sbm(N, th.mat, b, directed = F, loops = F) # population graph
-
-#########################################
-# RDPG
-
-norm_vec <- function(x) x/sqrt(sum(x^2)) # Norm of a vector
-
-d <- 6 # Dimension of latent positions
-X <- matrix(runif(N*d), nrow = N, byrow = F) # Latent positions
-nX <- apply(X, 1, norm_vec)
-nX <- t(nX) %*% nX 
-diag(nX) <- 0 # Matrix of connection probabilities
-AN <- graph_from_adjacency_matrix(gmodel.P(nX, rep = 1, noloop = TRUE, symmetric.out = TRUE))
-
-#########################################
-# Sparse Graphon Model
-# Kernel: rho*|eps_i - eps_j|
-
-rho <- 1/N^(1/12) # Sparsity parameter
-Xi <- matrix(rep(runif(N), times = N), nrow = N, byrow = F) # Latent positions
-H <- rho*(abs(Xi - t(Xi))) # Matrix of connection probabilities
-AN <- graph_from_adjacency_matrix(gmodel.P(H, rep = 1, noloop = TRUE, symmetric.out = TRUE)) # population graph
-
-#########################################
-# Sparse SBM
-
-rho <- 1/N^(1/12) # Sparsity parameter
-th.mat <- rho*matrix(c(0.4, 0.1, 0.2, 0.1, 0.5, 0.3, 0.2, 0.3, 0.7), ncol = 3) # Block probability matrix
-lambda <- c(0.3, 0.3, 0.4) # Probability of group membership
-b <- N*lambda
-AN <- sample_sbm(N, th.mat, b, directed = F, loops = F) # population graph
-
-################################################################################
+# ################################################################################
+# # Random Graph Generating Models
+# 
+# #########################################
+# # W random Graph
+# # Kernel: |eps_i - eps_j|
+# 
+# Xi <- matrix(rep(runif(N), times = N), nrow = N, byrow = F) # Latent positions
+# H <- (abs(Xi - t(Xi))) # Matrix of connection probabilities
+# AN <- graph_from_adjacency_matrix(gmodel.P(H, rep = 1, noloop = TRUE, symmetric.out = TRUE)) # population graph
+# 
+# #########################################
+# # SBM
+# 
+# th.mat <- matrix(c(0.4, 0.1, 0.2, 0.1, 0.5, 0.3, 0.2, 0.3, 0.7), ncol = 3) # Block probability matrix
+# lambda <- c(0.3, 0.3, 0.4) # Probability of group membership
+# b <- N*lambda
+# AN <- sample_sbm(N, th.mat, b, directed = F, loops = F) # population graph
+# 
+# #########################################
+# # RDPG
+# 
+# norm_vec <- function(x) x/sqrt(sum(x^2)) # Norm of a vector
+# 
+# d <- 6 # Dimension of latent positions
+# X <- matrix(runif(N*d), nrow = N, byrow = F) # Latent positions
+# nX <- apply(X, 1, norm_vec)
+# nX <- t(nX) %*% nX 
+# diag(nX) <- 0 # Matrix of connection probabilities
+# AN <- graph_from_adjacency_matrix(gmodel.P(nX, rep = 1, noloop = TRUE, symmetric.out = TRUE))
+# 
+# #########################################
+# # Sparse Graphon Model
+# # Kernel: rho*|eps_i - eps_j|
+# 
+# rho <- 1/N^(1/12) # Sparsity parameter
+# Xi <- matrix(rep(runif(N), times = N), nrow = N, byrow = F) # Latent positions
+# H <- rho*(abs(Xi - t(Xi))) # Matrix of connection probabilities
+# AN <- graph_from_adjacency_matrix(gmodel.P(H, rep = 1, noloop = TRUE, symmetric.out = TRUE)) # population graph
+# 
+# #########################################
+# # Sparse SBM
+# 
+# rho <- 1/N^(1/12) # Sparsity parameter
+# th.mat <- rho*matrix(c(0.4, 0.1, 0.2, 0.1, 0.5, 0.3, 0.2, 0.3, 0.7), ncol = 3) # Block probability matrix
+# lambda <- c(0.3, 0.3, 0.4) # Probability of group membership
+# b <- N*lambda
+# AN <- sample_sbm(N, th.mat, b, directed = F, loops = F) # population graph
+# 
+# ################################################################################
 # Implementation 
 
 val.df.list <- list() # Data frame to store jackknife values 
