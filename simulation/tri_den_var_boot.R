@@ -1,4 +1,4 @@
-# Code to compute the ratio of jackknife variance to the true variance
+# Code to compute the ratio of bootstrap variance to the true variance
 
 library(parallel)
 library(igraph)
@@ -7,13 +7,15 @@ library(graphon)
 detectCores()
 n.core <- 10 # number of codes to be used in parallel
 
+
 ################################################################################
 # Function computes the estimate of true population variance using MC
 # AN: population graph of Size N
+# N: population size
 # n: sample size
 # B: MC replication
 
-true.fun <- function(AN, n, B){
+true.fun <- function(AN,N, n, B){
   return(unlist(lapply(1:B, function(i){
     # Take sample of size n from N
     b.sam <- sort(sample(1:N, n, replace = F))
@@ -23,40 +25,53 @@ true.fun <- function(AN, n, B){
 }
 
 ################################################################################
-# Function performs jackknife on the sample
+# Function performs boostrap on the sample
 # AN: population graph of Size N
 # n: sample size
+# N: population size
 # sam: sampled vertices
 
-jack.fun <- function(AN, sam, n){
-  unlist(lapply(sam, function(i){
-    # create the sampled network deleting vertex i
-    ints <- setdiff(sam,i)
-    sub.graph <- subgraph(AN, ints)
-    # Compute triangle density 
-    ct <- (length(triangles(sub.graph))/3)/(choose(n-1,3))
-    return(ct)
-  }))
+boot.fun <- function(AN, sam, n, N){
+  
+  # construction of the pseudo population
+  K <- floor(N/n)
+  
+  if(n*K == N){
+    new_pop <<- rep(sam, K) # N is a multiple of n
+  }
+  else{
+      new_pop <<- c( rep(sam, K), sam[1:(N-n*K)] ) # N is not a multiple of n
+  }
+  # Take a boostrap sample of size n from N
+  boot_sam <- sort(new_pop[sample(1:N, n, replace = F)])
+  # Graph from boostrap samples
+  boot.graph <- graph_from_adjacency_matrix(get.adjacency(AN)[boot_sam, boot_sam])
+  # Compute triangle density 
+  ct <- (length(triangles(boot.graph))/3)/(choose(n,3))
+  return(ct)
 }
 
 ################################################################################
-# Function computes jackknife variance for the sample
+# Function computes boostrap varince for the sample
 # AN: population graph of Size N
 # n: sample size
 # sam: sampled vertices
-# f : sampling fraction
+# f: sampling fraction
+# B: number of boostrap replication
 
-resam.fun <- function(AN, sam, n, f){
+resam.fun <- function(AN, sam, n, f, B){
   
   st <- Sys.time()
-  # compute the 1-deleted subgraph density counts
-  jack.sam <- jack.fun(AN, sam ,n)
-  # jackknife variance
-  jack.var <- (1-f)*(n-1)*sum((jack.sam - mean(jack.sam))^2)
-  jack.time <- as.numeric(Sys.time()-st)/60
+  # subgraph density from B boostrap samples
+  boot_val <- unlist(lapply(1:B, function(boot_rep){
+    boot.fun(AN, sam, n, N)
+  }))
+  # Boostrap variance
+  boot_var <- var(boot_val)
+  boot_time <- as.numeric(Sys.time()-st)/60
   
-  # return jackknife estimate of variance and time taken
-  return(c(jack.var, jack.time))
+  # return boostrap estimate of variance and time taken
+  return(c(boot_var, boot_time))
 }
 
 ################################################################################
@@ -64,15 +79,14 @@ resam.fun <- function(AN, sam, n, f){
 # AN: population graph of Size N
 # n: sample size
 # f : sampling fraction
-# B : MC replicate for jackknife
+# B : number of boostrap replication
 
 get.val <- function(AN, N, f, B){
   n <- round(N*f)
   sam <- sort(sample(1:N, n, replace = FALSE))
-  val <- resam.fun(AN, sam, n, f)
+  val <- resam.fun(AN, sam, n, f, B)
   return(c(val))
 }
-
 
 ################################################################################
 # Simulation parameters
@@ -80,8 +94,9 @@ get.val <- function(AN, N, f, B){
 N <- 100 # population size
 f <- c(0.05, 0.1, 0.3) # sampling fractions
 n <- round(N*f) # sample size
-B <- 10 # MC replicate to estimate true variance
-M <- 10 # MC replicate for jackknife
+B <- 10 # Bootstrap replicate to estimate true variance
+M <- 10 # MC replicate for bootstrap
+
 
 ################################################################################
 # Random Graph Generating Models
@@ -135,25 +150,26 @@ AN <- sample_sbm(N, th.mat, b, directed = F, loops = F) # population graph
 ################################################################################
 # Implementation 
 
-val.df.list <- list() # Data frame to store jackknife values 
+val.df.list <- list() # Data frame to store bootstrap values 
 val.df.true <- numeric() # store true variance
 
 for (f_i in 1:length(f)) {
+  
+  n_i <- round(N*f[f_i])
   # Store values for each sampling fraction
   
   val.df.list[[f_i]] <- matrix( unlist( mclapply(1:M, function(j) {
-    get.val(AN, N, f[f_i], B)}, mc.cores = n.core) ) , byrow = T, ncol = 2) # jackknife values
+    get.val(AN, N, f[f_i], B)}, mc.cores = n.core) ) , byrow = T, ncol = 2) # bootstrap values
   
-  n_i <- round(N*f[f_i])
-  true.sam <- true.fun(AN, n_i, B)
-  val.df.true[f_i] <- n_i*var(true.sam) # population variance
+  true.sam <- true.fun(AN, N, n_i, B)
+  val.df.true[f_i] <- var(true.sam) # population variance (not multiplied with n) 
 }
 
 ################################################################################
 # Visualization
 
 res.df <- matrix(unlist(lapply(1:length(f), function(f_i){
-  val.df.list[[f_i]][,1]/val.df.true[f_i] # ratio: jackknife var/ true var
+  val.df.list[[f_i]][,1]/val.df.true[f_i] # ratio: bootstrap var/ true var
 })), byrow = F, ncol = length(f))
 colnames(res.df) <- f
 
